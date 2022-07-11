@@ -75,11 +75,11 @@ untrusted_addr get_ip(vmstate* const vm) {
     return a;
 }
 
-void set_ip(vmstate* const vm, addr_t ip) {
+void set_ip(vmstate* const vm, const addr_t ip) {
     vm->registers[REG_IP] = ip;
 }
 
-untrusted_addr get_lr(vmstate* const vm) {
+untrusted_addr get_lr(const vmstate* const vm) {
     const untrusted_addr a = { vm->registers[REG_LR] & ~(addr_t)3 };
     return a;
 }
@@ -88,7 +88,7 @@ void set_lr(vmstate* const vm, const addr_t lr) {
     vm->registers[REG_LR] = lr;
 }
 
-untrusted_addr get_sp(vmstate* const vm) {
+untrusted_addr get_sp(const vmstate* const vm) {
     const untrusted_addr a = { vm->registers[REG_SP] };
     return a;
 }
@@ -97,7 +97,7 @@ void set_sp(vmstate* const vm, const addr_t sp) {
     vm->registers[REG_SP] = sp;
 }
 
-untrusted_addr get_addr(vmstate* const vm, const uint8_t reg, const uint8_t offset) {
+untrusted_addr get_addr(const vmstate* const vm, const uint8_t reg, const uint8_t offset) {
     untrusted_addr a = { vm->registers[reg] + offset };
     return a;
 }
