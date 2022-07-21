@@ -1,12 +1,12 @@
 
 from asm import *
 
-loadw(r10, r10, 4)
-loadslimm(r11, 0x8321)
-oruuimm(r11, 0x0234)
-store32(r11, r10, 0)
+loadregs(r6, r10, r20)
 
-load32(r20, r10, 1)
+loadulimm(r4, 400)
+storeregs(r4, r10, r20)
+
+loadregs(r4, r100, r110)
 
 syscall()
 

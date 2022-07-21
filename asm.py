@@ -21,17 +21,19 @@ OP_LOAD_WORD      = 0xE
 OP_LOAD_SLIMM     = 0xF
 OP_LOAD_ULIMM     = 0x10
 OP_OR_UUIMM       = 0x11
-OP_STORE_BYTE     = 0x12
-OP_STORE_2BYTE    = 0x13
-OP_STORE_4BYTE    = 0x14
-OP_STORE_WORD     = 0x15
-OP_REGCALL        = 0x16
-OP_RELCALL        = 0x17
-OP_RELJUMP_IF0    = 0x19
-OP_RELJUMP_IFLT0  = 0x1A
-OP_RELJUMP_IFGT0  = 0x1B
-OP_RELJUMP_IFLTE0 = 0x1C
-OP_RELJUMP_IFGTE0 = 0x1D
+OP_LOAD_REGS      = 0x12
+OP_STORE_BYTE     = 0x13
+OP_STORE_2BYTE    = 0x14
+OP_STORE_4BYTE    = 0x15
+OP_STORE_WORD     = 0x16
+OP_STORE_REGS     = 0x17
+OP_REGCALL        = 0x18
+OP_RELCALL        = 0x19
+OP_RELJUMP_IF0    = 0x1A
+OP_RELJUMP_IFLT0  = 0x1B
+OP_RELJUMP_IFGT0  = 0x1C
+OP_RELJUMP_IFLTE0 = 0x1D
+OP_RELJUMP_IFGTE0 = 0x1E
 OP_SYSCALL        = 0x1F
 
 (r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19, r20, r21, r22, r23,
@@ -85,6 +87,7 @@ r254, r255) = (
 rip = r0
 rlr = r1
 rsp = r2
+rk  = r255
 
 (fr0, fr1, fr2, fr3, fr4, fr5, fr6, fr7, fr8, fr9, fr10, fr11, fr12, fr13, fr14, fr15, fr16, fr17, fr18, fr19, fr20, fr21, fr22, fr23,
 fr24, fr25, fr26, fr27, fr28, fr29, fr30, fr31, fr32, fr33, fr34, fr35, fr36, fr37, fr38, fr39, fr40, fr41, fr42, fr43, fr44, fr45,
@@ -201,10 +204,22 @@ def loadslimm(dst, value): encode_immload(OP_LOAD_SLIMM, dst, value)
 def loadulimm(dst, value): encode_immload(OP_LOAD_ULIMM, dst, value)
 def oruuimm(dst, value): encode_immload(OP_OR_UUIMM, dst, value)
 
+def loadregs(addr, startreg, endreg):
+    encode_litu8(OP_LOAD_REGS)
+    encode_reg(addr)
+    encode_reg(startreg)
+    encode_reg(endreg)
+
 def store8(dst, src, offset = 0): encodeloadstore(OP_STORE_BYTE, dst, src, offset)
 def store16(dst, src, offset = 0): encodeloadstore(OP_STORE_2BYTE, dst, src, offset)
 def store32(dst, src, offset = 0): encodeloadstore(OP_STORE_4BYTE, dst, src, offset)
 def storew(dst, src, offset = 0): encodeloadstore(OP_STORE_WORD, dst, src, offset)
+
+def storeregs(addr, startreg, endreg):
+    encode_litu8(OP_STORE_REGS)
+    encode_reg(addr)
+    encode_reg(startreg)
+    encode_reg(endreg)
 
 def regcall(reg):
     encode_litu8(OP_REGCALL)
@@ -231,6 +246,10 @@ def syscall():
     encode_litu8(OP_SYSCALL)
     encode_litu8(0)
     encode_litu16(0)
+
+def padto(addr):
+    global output
+    output = output.ljust(100, b'\x00')
 
 def done():
     hexdump.hexdump(output)

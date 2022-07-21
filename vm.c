@@ -28,23 +28,28 @@ typedef enum OPCODES
     OP_LOAD_SLIMM     = 0xF,
     OP_LOAD_ULIMM     = 0x10,
     OP_OR_UUIMM       = 0x11,
-    OP_STORE_BYTE     = 0x12,
-    OP_STORE_2BYTE    = 0x13,
-    OP_STORE_4BYTE    = 0x14,
-    OP_STORE_WORD     = 0x15,
-    OP_REGCALL        = 0x16,
-    OP_RELCALL        = 0x17,
-    OP_RELJUMP_IF0    = 0x19,
-    OP_RELJUMP_IFLT0  = 0x1A,
-    OP_RELJUMP_IFGT0  = 0x1B,
-    OP_RELJUMP_IFLTE0 = 0x1C,
-    OP_RELJUMP_IFGTE0 = 0x1D,
+    OP_LOAD_REGS      = 0x12,
+    OP_STORE_BYTE     = 0x13,
+    OP_STORE_2BYTE    = 0x14,
+    OP_STORE_4BYTE    = 0x15,
+    OP_STORE_WORD     = 0x16,
+    OP_STORE_REGS     = 0x17,
+    OP_REGCALL        = 0x18,
+    OP_RELCALL        = 0x19,
+    OP_RELJUMP_IF0    = 0x1A,
+    OP_RELJUMP_IFLT0  = 0x1B,
+    OP_RELJUMP_IFGT0  = 0x1C,
+    OP_RELJUMP_IFLTE0 = 0x1D,
+    OP_RELJUMP_IFGTE0 = 0x1E,
     OP_SYSCALL        = 0x1F
 } OPCODES;
 
+typedef size_t reg_t;
+
 typedef struct vmstate {
-    size_t registers[256];
-    double fregisters[128];
+    reg_t msr;
+    reg_t registers[256];
+    double fregisters[256];
     size_t memory_size;
     uint8_t* memory;
 } vmstate;
@@ -65,9 +70,7 @@ addr_t check_addr(const untrusted_addr ptr, const vmstate* const vm, const size_
 enum {
     REG_IP = 0,
     REG_LR = 1,
-    REG_SP = 2,
-
-    OPCODE_SPECIAL_BIT = 0x80
+    REG_SP = 2
 };
 
 untrusted_addr get_ip(vmstate* const vm) {
@@ -179,15 +182,24 @@ void execute(vmstate* const vm, const long imgsize)
             lhs = inst_3op_lhs(inst),
             rhs = inst_3op_rhs(inst),
 
-            // mem encoding
+            // load/store encoding
             reg = dst,
             addrreg = lhs,
             offset = rhs,
+
+            // regload/regstore encoding
+            startreg = lhs,
+            endreg = rhs,
 
             // jump encoding
             jumpreg = dst,
             compreg = dst;
 
+        const size_t
+            // regload/regstore encoding
+            numregs = max(dst, endreg) - min(dst, endreg),
+            memsize = sizeof(size_t) * numregs;
+            
         const int16_t
             // jump encoding
             jumpoffset = (lhs << 8) | rhs;
@@ -297,6 +309,17 @@ void execute(vmstate* const vm, const long imgsize)
             break;
         }
 
+        case OP_LOAD_REGS: {
+            addr_t taddr = check_addr(get_addr(vm, dst, 0), vm, memsize);
+
+            for (uint8_t reg = startreg; reg != endreg; reg = (reg + 1) % 256) {
+                vm->registers[reg] = *(reg_t*)(vm->memory + taddr);
+                taddr += sizeof(reg_t);
+            }
+
+            break;
+        }
+
         case OP_OR_UUIMM: {
             const uint32_t value = ((uint32_t)lhs << 24) | ((uint32_t)rhs << 16);
             vm->registers[dst] |= value;
@@ -324,6 +347,17 @@ void execute(vmstate* const vm, const long imgsize)
         case OP_STORE_WORD: {
             const addr_t taddr = check_addr(addr, vm, sizeof(size_t));
             *(size_t*)(vm->memory + taddr) = vm->registers[reg];
+            break;
+        }
+
+        case OP_STORE_REGS: {
+            addr_t taddr = check_addr(get_addr(vm, dst, 0), vm, memsize);
+
+            for (uint8_t reg = startreg; reg != endreg; reg = (reg + 1) % 256) {
+                *(reg_t*)(vm->memory + taddr) = vm->registers[reg];
+                taddr += sizeof(reg_t);
+            }
+
             break;
         }
 
